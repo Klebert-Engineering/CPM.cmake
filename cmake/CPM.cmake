@@ -1289,9 +1289,21 @@ function(cpm_get_version_from_git_tag GIT_TAG RESULT)
         PARENT_SCOPE
     )
   else()
-    string(REGEX MATCH "v?([0123456789.]*).*" _ ${GIT_TAG})
+    set(parsed_version "")
+    # Prefer dotted numeric versions like 1.2.3 even if prefixed (e.g. cpp-v1.2.3)
+    string(REGEX MATCH "([0-9]+(\\.[0-9]+)+)" dotted_match "${GIT_TAG}")
+    if(NOT dotted_match STREQUAL "")
+      set(parsed_version "${CMAKE_MATCH_1}")
+    else()
+      # Fallback: grab the first contiguous number sequence (e.g. release-2025)
+      string(REGEX MATCH "([0-9]+)" numeric_match "${GIT_TAG}")
+      if(NOT numeric_match STREQUAL "")
+        set(parsed_version "${CMAKE_MATCH_1}")
+      endif()
+    endif()
+
     set(${RESULT}
-        ${CMAKE_MATCH_1}
+        "${parsed_version}"
         PARENT_SCOPE
     )
   endif()
