@@ -375,14 +375,42 @@ function(CPMFindPackage)
 endfunction()
 
 # checks if a package has been added before
-function(cpm_check_if_package_already_added CPM_ARGS_NAME CPM_ARGS_VERSION)
+function(cpm_check_if_package_already_added CPM_ARGS_NAME CPM_ARGS_VERSION CPM_ARGS_STRICT_VERSION)
   if("${CPM_ARGS_NAME}" IN_LIST CPM_PACKAGES)
     CPMGetPackageVersion(${CPM_ARGS_NAME} CPM_PACKAGE_VERSION)
-    if("${CPM_PACKAGE_VERSION}" VERSION_LESS "${CPM_ARGS_VERSION}")
-      message(
-        WARNING
-          "${CPM_INDENT} Requires a newer version of ${CPM_ARGS_NAME} (${CPM_ARGS_VERSION}) than currently included (${CPM_PACKAGE_VERSION})."
-      )
+    set(strict_version FALSE)
+    if(CPM_ARGS_STRICT_VERSION)
+      set(strict_version TRUE)
+    elseif(DEFINED CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION AND CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION)
+      set(strict_version TRUE)
+    endif()
+
+    set(version_mismatch FALSE)
+    if(NOT "${CPM_PACKAGE_VERSION}" STREQUAL "" AND NOT "${CPM_ARGS_VERSION}" STREQUAL "")
+      if(NOT "${CPM_PACKAGE_VERSION}" VERSION_EQUAL "${CPM_ARGS_VERSION}")
+        set(version_mismatch TRUE)
+      endif()
+    elseif(NOT "${CPM_PACKAGE_VERSION}" STREQUAL "${CPM_ARGS_VERSION}")
+      set(version_mismatch TRUE)
+    endif()
+
+    if(version_mismatch)
+      if(strict_version)
+        message(
+          FATAL_ERROR
+            "${CPM_INDENT} Strict version check failed for ${CPM_ARGS_NAME}: requested ${CPM_ARGS_VERSION} but ${CPM_PACKAGE_VERSION} is already included."
+        )
+      elseif("${CPM_PACKAGE_VERSION}" VERSION_LESS "${CPM_ARGS_VERSION}")
+        message(
+          WARNING
+            "${CPM_INDENT} Requires a newer version of ${CPM_ARGS_NAME} (${CPM_ARGS_VERSION}) than currently included (${CPM_PACKAGE_VERSION})."
+        )
+      else()
+        message(
+          WARNING
+            "${CPM_INDENT} Requested ${CPM_ARGS_NAME} (${CPM_ARGS_VERSION}) differs from already included version (${CPM_PACKAGE_VERSION}). Reusing the existing package."
+        )
+      endif()
     endif()
     cpm_get_fetch_properties(${CPM_ARGS_NAME})
     set(${CPM_ARGS_NAME}_ADDED NO)
@@ -679,7 +707,7 @@ function(CPMAddPackage)
     set(ARGN "${ARGV0};EXCLUDE_FROM_ALL;YES;SYSTEM;YES;${ARGN}")
   endif()
 
-  cmake_parse_arguments(CPM_ARGS "" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
+  cmake_parse_arguments(CPM_ARGS "STRICT_VERSION" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
   # Set default values for arguments
   if(NOT DEFINED CPM_ARGS_VERSION)
@@ -751,8 +779,15 @@ function(CPMAddPackage)
     )
   endif()
 
+  # Track whether this package requires strict version matching
+  if(CPM_ARGS_STRICT_VERSION)
+    set(CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION TRUE CACHE INTERNAL "")
+  elseif(DEFINED CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION AND CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION)
+    set(CPM_ARGS_STRICT_VERSION TRUE)
+  endif()
+
   # Check if package has been added before
-  cpm_check_if_package_already_added(${CPM_ARGS_NAME} "${CPM_ARGS_VERSION}")
+  cpm_check_if_package_already_added(${CPM_ARGS_NAME} "${CPM_ARGS_VERSION}" "${CPM_ARGS_STRICT_VERSION}")
   if(CPM_PACKAGE_ALREADY_ADDED)
     cpm_export_variables(${CPM_ARGS_NAME})
     return()
@@ -784,7 +819,7 @@ function(CPMAddPackage)
     CPMAddPackage(${declaration})
     cpm_export_variables(${CPM_ARGS_NAME})
     # checking again to ensure version and option compatibility
-    cpm_check_if_package_already_added(${CPM_ARGS_NAME} "${CPM_ARGS_VERSION}")
+    cpm_check_if_package_already_added(${CPM_ARGS_NAME} "${CPM_ARGS_VERSION}" "${CPM_ARGS_STRICT_VERSION}")
     return()
   endif()
 
