@@ -125,6 +125,7 @@ option(CPM_USE_NAMED_CACHE_DIRECTORIES
        "Use additional directory of package name in cache on the most nested level."
        $ENV{CPM_USE_NAMED_CACHE_DIRECTORIES}
 )
+option(CPM_ENFORCE_STRICT "Fail configuration when STRICT_VERSION packages mismatch" ON)
 
 set(CPM_VERSION
     ${CURRENT_CPM_VERSION}
@@ -379,10 +380,12 @@ function(cpm_check_if_package_already_added CPM_ARGS_NAME CPM_ARGS_VERSION CPM_A
   if("${CPM_ARGS_NAME}" IN_LIST CPM_PACKAGES)
     CPMGetPackageVersion(${CPM_ARGS_NAME} CPM_PACKAGE_VERSION)
     set(strict_version FALSE)
-    if(CPM_ARGS_STRICT_VERSION)
-      set(strict_version TRUE)
-    elseif(DEFINED CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION AND CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION)
-      set(strict_version TRUE)
+    if(CPM_ENFORCE_STRICT)
+      if(CPM_ARGS_STRICT_VERSION)
+        set(strict_version TRUE)
+      elseif(DEFINED CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION AND CPM_PACKAGE_${CPM_ARGS_NAME}_STRICT_VERSION)
+        set(strict_version TRUE)
+      endif()
     endif()
 
     set(version_mismatch FALSE)
