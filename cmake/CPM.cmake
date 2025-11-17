@@ -401,7 +401,7 @@ function(cpm_check_if_package_already_added CPM_ARGS_NAME CPM_ARGS_VERSION CPM_A
       if(strict_version)
         message(
           FATAL_ERROR
-            "${CPM_INDENT} Strict version check failed for ${CPM_ARGS_NAME}: requested ${CPM_ARGS_VERSION} but ${CPM_PACKAGE_VERSION} is already included."
+            "${CPM_INDENT} Strict version check failed for ${CPM_ARGS_NAME}: requested ${CPM_ARGS_VERSION} but ${CPM_PACKAGE_VERSION} is already included. Please align the versions, or set CPM_ENFORCE_STRICT=OFF."
         )
       elseif("${CPM_PACKAGE_VERSION}" VERSION_LESS "${CPM_ARGS_VERSION}")
         message(
