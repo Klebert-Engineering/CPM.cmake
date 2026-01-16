@@ -1661,32 +1661,28 @@ endfunction()
 
 # guesses the package version from a git tag
 function(cpm_get_version_from_git_tag GIT_TAG RESULT)
-  string(LENGTH ${GIT_TAG} length)
-  if(length EQUAL 40)
-    # GIT_TAG is probably a git hash
-    set(${RESULT}
-        0
-        PARENT_SCOPE
-    )
-  else()
-    set(parsed_version "")
-    # Prefer dotted numeric versions like 1.2.3 even if prefixed (e.g. cpp-v1.2.3)
-    string(REGEX MATCH "([0-9]+(\\.[0-9]+)+)" dotted_match "${GIT_TAG}")
-    if(NOT dotted_match STREQUAL "")
-      set(parsed_version "${CMAKE_MATCH_1}")
-    else()
-      # Fallback: grab the first contiguous number sequence (e.g. release-2025)
-      string(REGEX MATCH "([0-9]+)" numeric_match "${GIT_TAG}")
-      if(NOT numeric_match STREQUAL "")
-        set(parsed_version "${CMAKE_MATCH_1}")
-      endif()
-    endif()
-
-    set(${RESULT}
-        "${parsed_version}"
-        PARENT_SCOPE
-    )
+  # Use cpm_is_git_tag_commit_hash for consistent 7-40 char hex hash detection
+  cpm_is_git_tag_commit_hash("${GIT_TAG}" IS_HASH)
+  if(IS_HASH)
+    set(${RESULT} 0 PARENT_SCOPE)
+    return()
   endif()
+
+  # Extract version from non-hash tags
+  set(parsed_version "")
+  # Prefer dotted numeric versions like 1.2.3 even if prefixed (e.g. cpp-v1.2.3)
+  string(REGEX MATCH "([0-9]+(\\.[0-9]+)+)" dotted_match "${GIT_TAG}")
+  if(NOT dotted_match STREQUAL "")
+    set(parsed_version "${CMAKE_MATCH_1}")
+  else()
+    # Fallback: grab the first contiguous number sequence (e.g. release-2025)
+    string(REGEX MATCH "([0-9]+)" numeric_match "${GIT_TAG}")
+    if(NOT numeric_match STREQUAL "")
+      set(parsed_version "${CMAKE_MATCH_1}")
+    endif()
+  endif()
+
+  set(${RESULT} "${parsed_version}" PARENT_SCOPE)
 endfunction()
 
 # guesses if the git tag is a commit hash or an actual tag or a branch name.
